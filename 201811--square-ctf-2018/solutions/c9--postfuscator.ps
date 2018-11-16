@@ -1,0 +1,129 @@
+%!PS
+/input 65 string def
+/Courier
+10 selectfont
+currentfile input readline
+%406016abbe1ac8a7a2d7140232c58
+%L0ksa1t4L0ksa1t4L0ksa1t4L0ksa1t4L0ksa1t4L0ksa1t4L0ksa1t4L0ksa1t
+%buf = '17120093678072186468590182921345215688056861272870'\
+%    + '98766124683827482364612085926889826861218289758821'\
+%    + '178245515674851882'
+pop
+/input exch store
+
+/encrypt_str {
+  /buf1 65 string def
+  /buf2 (4L0ksa1t) def
+  /n 0 def
+  {
+    buf2 n 8 mod get  % buf2[n%8]
+    xor               % buf2[n%8] ^ input
+    /i exch def     % i=buf2[n%8] ^ input
+    buf1 n i put    % buf1[n] = i
+    /n n 1 add store    % n++
+  } forall  % for all input
+  buf1 0 n getinterval  % return buf1[0:65]
+} def
+
+/test_str {
+  %/cipher exch def
+  %1 340 moveto
+  %cipher show
+  %cipher
+  /buf_z (800C46E31190C06039198D86E38180DC64311C0D868361C0D47230880C8730F198D06B0F1AC52192188C121C381B8C07039940D86D04898E06638190DC693484C4E092A8B0CA452C9F4961F34958DC6A389A40A691E1A8C643368AC4269010>) def
+  /buf 118 string def
+  /fake_file buf_z /ASCIIHexDecode filter def
+  /fake_file2 fake_file /LZWDecode filter def
+  fake_file2 buf readstring
+  %buf 0 50 getinterval
+  %/bufnc exch def
+  %1 360 moveto bufnc show
+  %buf 51 50 getinterval
+  %/bufnc exch def
+  %1 340 moveto bufnc show
+  %buf 100 18 getinterval
+  %/bufnc exch def
+  1 400 moveto buf show
+  pop
+  pop
+  /ok 0 def
+  /n 0 def
+  {
+    /c exch (...) cvs def  % c = "%d" % (cipher[i])
+    n 10 mul 380 moveto c show
+    buf n c length getinterval  % buf[n:n+len(c)]
+    /bufnc exch def
+    n 10 mul 360 moveto bufnc show
+    bufnc
+    c
+    eq {/ok ok c length add store} if  % ok += len(c) if c == buf[n:n+len(c)]
+    n 10 mul 340 moveto ok (...) cvs show
+    /n n c length add store     % n += len(c)
+  } forall  % cipher
+  ok buf length eq   % ok == 118
+} def
+input encrypt_str test_str
+{100 420 moveto (yes, you got it! flag-daf) show}
+{230 420 moveto (Sorry, nope.) show}
+ifelse
+/m {
+  1 dict begin
+    /p2y exch def
+    /p2x exch def
+    /p1y exch def
+    /p1x exch def
+    p1y p2y add 2 div
+    p1x p2x add 2 div
+  end
+} def
+/b {
+  1 dict begin
+    /r exch def
+    /p3y exch def
+    /p3x exch def
+    /p2y exch def
+    /p2x exch def
+    /p1y exch def
+    /p1x exch def
+    /p0y exch def
+    /p0x exch def
+    r 0 lt
+    {
+      newpath
+      p0x p0y moveto
+      p3x p3y lineto
+      stroke
+    }
+    {
+      /r r 1 sub store
+      p0x p0y p1x p1y m /p4x exch def /p4y exch def
+      p1x p1y p2x p2y m /p5x exch def /p5y exch def
+      p2x p2y p3x p3y m /p6x exch def /p6y exch def
+      p4x p4y p5x p5y m /p7x exch def /p7y exch def
+      p5x p5y p6x p6y m /p8x exch def /p8y exch def
+      p7x p7y p8x p8y m /p9x exch def /p9y exch def
+      p0x p0y p4x p4y p7x p7y p9x p9y r b
+      p9x p9y p8x p8y p6x p6y p3x p3y r b
+    }
+    ifelse
+  end
+} def
+/sq {
+  1 dict begin
+    /s 3 def
+    -70 -50 -70 -50 -70 50 -70 50 s b
+    -70 50 -70 70 -70 70 -50 70 s b
+    -50 70 -50 70 50 70 50 70 s b
+    50 70 70 70 70 70 70 50 s b
+    70 50 70 50 70 -50 70 -50 s b
+    70 -50 70 -70 70 -70 50 -70 s b
+    50 -70 50 -70 -50 -70 -50 -70 s b
+    -50 -70 -70 -70 -70 -70 -70 -50 s b
+  end
+} def
+300 200 translate
+2 setlinewidth
+20 {.99 .99 scale sq} repeat
+.6 .6 scale
+40 {.99 .99 scale sq} repeat
+showpage
