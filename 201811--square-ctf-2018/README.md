@@ -117,6 +117,8 @@ $$e_i=\frac{(X-EX)^T(Y_i-EY_i)}{\sqrt{(X-EX)^T(X-EX)}\sqrt{(Y_i-EY_i)^T(Y_i-EY_i
 
 之所以還需要手動，是暫時還不會利用python腳本進行帶cookie和token的網絡交互，待學會了可以有更加完美的解決方案。
 
+ps: 原來不需要從cookie提取token，token在返回的網頁中有，直接提取出來，用post方法提交即可。
+
 1. [A library to manipulate font files from Python](https://github.com/fonttools/fonttools)
 
 ## C9 postfuscator
