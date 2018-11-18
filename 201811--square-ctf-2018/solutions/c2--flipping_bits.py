@@ -1,8 +1,5 @@
 #!/usr/bin/python3
 # -*- coding=utf8 -*-
-"""
-Created by SkyBlueEE on 2018-11-09.
-"""
 # Written by Anirudh Anand (lucif3r) : email - anirudh@anirudhanand.com
 # This program will help to decrypt cipher text to plain text if you have
 # more than 1 cipher text encrypted with same Modulus (N) but different
