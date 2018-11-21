@@ -207,6 +207,14 @@ RITSEC{M3m0ry_F0r3ns1cs}
 ```
 看來不用==就好。如果覺得這個方法有些撞運氣，寫個腳本爆破好啦。
 
+其實Cg==可以用也可以不用(以爲最後這個是個回車)：
+```bash
+$ echo 'RITSEC{M3m0ry_F0r3ns1cs}' | base64
+UklUU0VDe00zbTByeV9GMHIzbnMxY3N9Cg==
+$ echo 'UklUU0VDe00zbTByeV9GMHIzbnMxY3N9' | base64 -d
+RITSEC{M3m0ry_F0r3ns1cs}$ echo 'UklUU0VDe00zbTByeV9GMHIzbnMxY3N9Cg==' | base64
+RITSEC{M3m0ry_F0r3ns1cs}
+```
 
 1. [參考Writeup](https://github.com/flawwan/CTF-Writeups/blob/master/ritsec/bucketofcash/writeup.md)
 
@@ -439,3 +447,51 @@ y0l0 man
 也可以通過猜測d0c7d2d1c3c1是RITSEC來得到同樣的結論，這是參考Writeup中的方法。
 
 1. [參考Writeup](https://fireshellsecurity.team/ritsec-pcap-me-if-you-can/)
+
+## From our friends at nexthop!
+1. 大概瀏覽一下pcap文件，發現有個域名就叫nexthop，很大可能就是它了：
+    ```bash
+    $ tshark -r nexthop.pcap | grep nexthop
+        3 108468.003977 192.168.1.174 → 192.168.1.1  DNS 75 Standard query 0x9c95 A nexthop.network
+        4 108468.003977 192.168.1.174 → 192.168.1.1  DNS 75 Standard query 0x9c95 A nexthop.network
+        9 108468.003977 192.168.1.174 → 192.168.1.1  DNS 75 Standard query 0x9c95 A nexthop.network
+       10 108468.003977 192.168.1.174 → 192.168.1.1  DNS 75 Standard query 0x9c95 A nexthop.network
+       31 108468.003977 192.168.1.174 → 192.168.1.1  DNS 75 Standard query 0x9c95 A nexthop.network
+       ...
+    ```
+2. 上一條命令後接wc查看一下，一共有144條。看起來應該是相同的DNS查詢請求。再仔細查看一下：
+    ```bash
+    $ tshark -r nexthop.pcap | grep nexthop| wc
+        144    1728   14112
+    $ tshark -r nexthop.pcap ip.dst==192.168.1.1 | wc
+        144    1728   14112
+    $ tshark -r nexthop.pcap -T fields -e data --disable-protocol dns ip.dst==192.168.1.1
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010000
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010001
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010000
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010001
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010000
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010000
+    ...
+    $ tshark -r nexthop.pcap -T fields -e data --disable-protocol dns ip.dst==192.168.1.1 | sort | uniq
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010000
+    9c9501000001000000000000076e657874686f70076e6574776f726b0000010001
+    ```
+    明明應該是相同的數據，卻出現了兩種不同的模式，最後一個比特不同。提取出來：
+    ```bash
+    $ tshark -r nexthop.pcap -T fields -e data --disable-protocol dns ip.dst==192.168.1.1 | sed -r 's/.*(.)$/\1/g' | xargs | sed 's/ //g'
+    010100100101001101111011001100010101010000110101010111110011010001001100010101110011010001011001001101010101111101000100010011100011010101111101
+    $ tshark -r nexthop.pcap -T fields -e data --disable-protocol dns ip.dst==192.168.1.1 | sed -r 's/.*(.)$/\1/g' | xargs | sed 's/ //g' | wc
+          1       1     145
+    ```
+    共144個字符（最後一個是回車）。假設是二進制ascii編碼，於是每個字節8個比特，共144/8=18個字符。
+    ```bash
+    $ tshark -r nexthop.pcap -T fields -e data --disable-protocol dns ip.dst==192.168.1.1 | sed -r 's/.*(.)$/\1/g' | xargs | sed 's/ //g' | decode.py bin
+    b'RS{1T5_4LW4Y5_DN5}'
+    ```
+    得到了flag。
+
+## Lite Forensics
+給了一堆sql命令，說flag就在數據庫中。
+
+[此處](https://ctftime.org/writeup/12223)給了一個writeup，但是沒看懂。
