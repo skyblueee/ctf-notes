@@ -1,0 +1,7 @@
+Yet Another HR Management Framework
+250
+Although there has been a ton of human resources management frameworks out there, fpasswd still wants to write his own framework. Check it out and SEE how that GOes!
+
+nc fun.ritsec.club 1337
+
+Author: fpasswd

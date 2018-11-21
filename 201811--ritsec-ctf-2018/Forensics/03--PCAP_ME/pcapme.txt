@@ -1,0 +1,9 @@
+PCAP Me If You Can
+300
+The hackers have written their own protocol for their MALL-ware. Can you figure out what they're saying?
+
+Hint 1: custom protocols are hard
+
+Hint 2: Don't worry, I won't make you decrypt anything in this challenge.
+
+Author: hulto

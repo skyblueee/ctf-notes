@@ -1,0 +1,5 @@
+One of these things doesn't belong!
+300
+Flag format is RS{}
+
+Author: sandw1ch

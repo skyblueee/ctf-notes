@@ -1,0 +1,7 @@
+Bucket 'o cash
+175
+https://s3.amazonaws.com/ritsec-ctf-files/memorydump
+
+CentOS 7.5
+
+Author: Jorgey7

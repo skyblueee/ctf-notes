@@ -1,0 +1,7 @@
+Nobody uses the eggplant emoji
+200
+Holy emojis batman! Decode the secret message.
+
+Wrap with RITSEC{key}
+
+Author: hulto

@@ -1,0 +1,9 @@
+Gimme sum fud
+100
+fpasswd is working late in the lab and he's really hungry. Give him some fud, he may give you something in return.
+
+nc fun.ritsec.club 1338
+
+If you are confident that your exploit is correct, run it multiple times against the target if you don't get the flag.
+
+Author: fpasswd

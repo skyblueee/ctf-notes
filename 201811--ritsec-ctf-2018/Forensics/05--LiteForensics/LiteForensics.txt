@@ -1,0 +1,7 @@
+Lite Forensics
+500
+There is a flag stored in this database somehow...
+
+Its not crypto
+
+Author: knif3
