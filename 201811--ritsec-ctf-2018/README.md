@@ -796,4 +796,118 @@ ga = 97112112108101112101097114098108117101
 gb = 100097114107104111114115101097105
 ```
 
-本體是密碼題分值最高的題（500分），DF交換不是難點，兩個腦洞纔是得分關鍵。
+本題是密碼題分值最高的題（500分），DF交換不是難點，兩個腦洞纔是得分關鍵。
+
+# Reverse
+## Freeze!
+給了兩個文件：main(ELF64)和libpython2.7.so.1.0
+
+flint大概看一下main，然後拖到IDA中，跟到main函數，發現這個這樣一個有意思的字符串`_MEIPASS2`，程序檢測這個環境變量。Google這個字符串，發現是和用pyinstaller將Python腳本打包成可執行文件有關；另外發現程序亂的很確實不太像C語言寫的，猜測是python腳本自動生成的ELF文件。
+
+可以用`py-archive_viewer`進行解包。
+```bash
+$ pyi-archive_viewer main
+ pos, length, uncompressed, iscompressed, type, name
+[(0, 171, 237, 1, 'm', u'struct'),
+ (171, 1127, 2522, 1, 'm', u'pyimod01_os_path'),
+ (1298, 4384, 11881, 1, 'm', u'pyimod02_archive'),
+ (5682, 7506, 22328, 1, 'm', u'pyimod03_importers'),
+ (13188, 1817, 5039, 1, 's', u'pyiboot01_bootstrap'),
+ (15005, 592, 1043, 1, 's', u'main'),
+ (15597, 642530, 642530, 0, 'z', u'PYZ-00.pyz')]
+? X main
+to filename? a.pyc
+? Q
+Traceback (most recent call last):
+  File "/usr/local/bin/pyi-archive_viewer", line 11, in <module>
+    sys.exit(run())
+...
+AssertionError
+$ cat a.pyc
+c@sRddlZddlZdZd�Zd�Ze�ejj�jd�GHdS(i����Ns�\x6a\x71\x61\x62\x7d\x7a\x4d\x47\x5f\x55\x59\x5b\x6e\x4f\x51\x53\x42\x55\x67\x51\x46\x6e\x55\x40\x69\x43\x45\x48\x5d\x47\x6e\x4b\x4c\x5f\x44\x4dcCsftjddddd�jd�}tjj�jd�}||krbdGHt|t�dGHndSNi�iiis%ss-
+Happy Birthday Hulto! :)
+Here is your flag:s
+(datetimestrftimetnowtbtstr(time_restime_now((smain.pytas
+                                                         $
+Cswd}|jd�d}xRtdt|��D];}|tt||t|��t||d�A�7}q/W|GHdS(Nts\xiii(tsplittrangetlentchrtordtint(tkeytflagtrestarrti((smain.pyRs
+9s%s(RtstructRRRRR(((smain.py<module>s
+            $ ctf-uncompy2le6 a.pyc
+...
+ImportError: Unknown magic number 99 in a.pyc
+```
+
+修復pyc文件的幻數。當pyc文件打包爲可執行文件時，pyc文件頭就沒用了，所以pyinstaller將其刪除了，下一步把它加上即可。
+
+對於python2.7來說，文件頭是四個字節(03 F3 0D 0A)然後跟着四個字節的時間戳。用hexeditor -b在文件最前面加上8個字節(03 F3 0A 0A 00 00 00 00)，即可成功修復。
+```bash
+$ ctf-uncompy2le6 a.pyc
+# uncompyle6 version 3.2.0
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 2.7.15+ (default, Nov 28 2018, 16:27:22)
+# [GCC 8.2.0]
+# Embedded file name: main.py
+import datetime, struct
+str = '\\x6a\\x71\\x61\\x62\\x7d\\x7a\\x4d\\x47\\x5f\\x55\\x59\\x5b\\x6e\\x4f\\x51\\x53\\x42\\x55\\x67\\x51\\x46\\x6e\\x55\\x40\\x69\\x43\\x45\\x48\\x5d\\x47\\x6e\\x4b\\x4c\\x5f\\x44\\x4d'
+
+def a():
+    time_res = datetime.datetime(1998, 1, 19, 0, 0).strftime('%s')
+    time_now = datetime.datetime.now().strftime('%s')
+    if time_now == time_res:
+        print '\nHappy Birthday Hulto! :) \nHere is your flag:'
+        b(time_res, str)
+        print '\n'
+
+
+def b(key, flag):
+    res = ''
+    arr = flag.split('\\x')[1:]
+    for i in range(0, len(arr)):
+        res += chr(ord(key[i % len(key)]) ^ int(arr[i], 16))
+
+    print res
+
+
+a()
+print datetime.datetime.now().strftime('%s')
+# okay decompiling a.pyc
+```
+修改程序使得b可以運行，得到如下輸出：
+```bash
+$ python main.py
+Happy Birthday Hulto! :)
+Here is your flag:
+RITSNCwoman_|hare_is_fy[super_xumt}
+
+1543854728
+```
+奇怪的是答案雖然呼之欲出，但是還不是`RITSEC{}`的形式，那麼應該是還差一點。
+```
+RITSNCwoman_|hare_is_fy[super_xumt}
+RITSEC{...........................}
+```
+看來應該是key的問題，可以想見，由於全世界有24個時區，每個時區在運行
+`
+time_res = datetime.datetime(1998, 1, 19, 0, 0).strftime('%s')
+`
+時得到的結果都不一樣，所以可以窮舉得出結果。修改程序得到flag：
+```
+$ cat main.py
+import datetime, struct
+str = '\\x6a\\x71\\x61\\x62\\x7d\\x7a\\x4d\\x47\\x5f\\x55\\x59\\x5b\\x6e\\x4f\\x51\\x53\\x42\\x55\\x67\\x51\\x46\\x6e\\x55\\x40\\x69\\x43\\x45\\x48\\x5d\\x47\\x6e\\x4b\\x4c\\x5f\\x44\\x4d'
+
+def b(key, flag):
+    res = ''
+    arr = flag.split('\\x')[1:]
+    for i in range(0, len(arr)):
+        res += chr(ord(key[i % len(key)]) ^ int(arr[i], 16))
+    print res
+
+for h in range(24):
+    time_res = datetime.datetime(1998, 1, 19, h, 0).strftime('%s')
+    b(time_res, str)
+$ python main.py | grep 'RITSEC{'
+RITSEC{woman_where_is_my_super_suit}
+```
+
+1. [Manually Unpacking PyInstaller (Python 2p6)](https://advancedpersistentjest.com/2016/07/31/manually-unpacking-pyinstaller-python-2p6/)
+1. [Python-Based Malware Uses NSA Exploit to Propagate Monero (XMR) Miner](https://www.fortinet.com/blog/threat-research/python-based-malware-uses-nsa-exploit-to-propagate-monero--xmr--.html)
