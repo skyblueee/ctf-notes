@@ -1,4 +1,3 @@
-https://www.youtube.com/watch?v=cEuU64Zt4B0
 300
 Find the accepted key (don't fail). Wrap in RITSEC{you_key}.
 
