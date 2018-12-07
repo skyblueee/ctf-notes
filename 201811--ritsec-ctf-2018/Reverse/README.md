@@ -1,0 +1,219 @@
+# Reverse
+## Freeze!
+給了兩個文件：main(ELF64)和libpython2.7.so.1.0
+
+flint大概看一下main，然後拖到IDA中，跟到main函數，發現這個這樣一個有意思的字符串`_MEIPASS2`，程序檢測這個環境變量。Google這個字符串，發現是和用pyinstaller將Python腳本打包成可執行文件有關；另外發現程序亂的很確實不太像C語言寫的，猜測是python腳本自動生成的ELF文件。
+
+可以用`py-archive_viewer`進行解包。
+```bash
+$ pyi-archive_viewer main
+ pos, length, uncompressed, iscompressed, type, name
+[(0, 171, 237, 1, 'm', u'struct'),
+ (171, 1127, 2522, 1, 'm', u'pyimod01_os_path'),
+ (1298, 4384, 11881, 1, 'm', u'pyimod02_archive'),
+ (5682, 7506, 22328, 1, 'm', u'pyimod03_importers'),
+ (13188, 1817, 5039, 1, 's', u'pyiboot01_bootstrap'),
+ (15005, 592, 1043, 1, 's', u'main'),
+ (15597, 642530, 642530, 0, 'z', u'PYZ-00.pyz')]
+? X main
+to filename? a.pyc
+? Q
+Traceback (most recent call last):
+  File "/usr/local/bin/pyi-archive_viewer", line 11, in <module>
+    sys.exit(run())
+...
+AssertionError
+$ cat a.pyc
+c@sRddlZddlZdZd�Zd�Ze�ejj�jd�GHdS(i����Ns�\x6a\x71\x61\x62\x7d\x7a\x4d\x47\x5f\x55\x59\x5b\x6e\x4f\x51\x53\x42\x55\x67\x51\x46\x6e\x55\x40\x69\x43\x45\x48\x5d\x47\x6e\x4b\x4c\x5f\x44\x4dcCsftjddddd�jd�}tjj�jd�}||krbdGHt|t�dGHndSNi�iiis%ss-
+Happy Birthday Hulto! :)
+Here is your flag:s
+(datetimestrftimetnowtbtstr(time_restime_now((smain.pytas
+                                                         $
+Cswd}|jd�d}xRtdt|��D];}|tt||t|��t||d�A�7}q/W|GHdS(Nts\xiii(tsplittrangetlentchrtordtint(tkeytflagtrestarrti((smain.pyRs
+9s%s(RtstructRRRRR(((smain.py<module>s
+            $ ctf-uncompy2le6 a.pyc
+...
+ImportError: Unknown magic number 99 in a.pyc
+```
+
+修復pyc文件的幻數。當pyc文件打包爲可執行文件時，pyc文件頭就沒用了，所以pyinstaller將其刪除了，下一步把它加上即可。
+
+對於python2.7來說，文件頭是四個字節(03 F3 0D 0A)然後跟着四個字節的時間戳。用hexeditor -b在文件最前面加上8個字節(03 F3 0A 0A 00 00 00 00)，即可成功修復。
+```bash
+$ ctf-uncompy2le6 a.pyc
+# uncompyle6 version 3.2.0
+# Python bytecode 2.7 (62211)
+# Decompiled from: Python 2.7.15+ (default, Nov 28 2018, 16:27:22)
+# [GCC 8.2.0]
+# Embedded file name: main.py
+import datetime, struct
+str = '\\x6a\\x71\\x61\\x62\\x7d\\x7a\\x4d\\x47\\x5f\\x55\\x59\\x5b\\x6e\\x4f\\x51\\x53\\x42\\x55\\x67\\x51\\x46\\x6e\\x55\\x40\\x69\\x43\\x45\\x48\\x5d\\x47\\x6e\\x4b\\x4c\\x5f\\x44\\x4d'
+
+def a():
+    time_res = datetime.datetime(1998, 1, 19, 0, 0).strftime('%s')
+    time_now = datetime.datetime.now().strftime('%s')
+    if time_now == time_res:
+        print '\nHappy Birthday Hulto! :) \nHere is your flag:'
+        b(time_res, str)
+        print '\n'
+
+
+def b(key, flag):
+    res = ''
+    arr = flag.split('\\x')[1:]
+    for i in range(0, len(arr)):
+        res += chr(ord(key[i % len(key)]) ^ int(arr[i], 16))
+
+    print res
+
+
+a()
+print datetime.datetime.now().strftime('%s')
+# okay decompiling a.pyc
+```
+
+修改程序使得b可以運行，得到如下輸出：
+```bash
+$ python main.py
+Happy Birthday Hulto! :)
+Here is your flag:
+RITSNCwoman_|hare_is_fy[super_xumt}
+
+1543854728
+```
+
+奇怪的是答案雖然呼之欲出，但是還不是`RITSEC{}`的形式，那麼應該是還差一點。
+```
+RITSNCwoman_|hare_is_fy[super_xumt}
+RITSEC{...........................}
+```
+看來應該是key的問題，可以想見，由於全世界有24個時區，每個時區在運行
+`
+time_res = datetime.datetime(1998, 1, 19, 0, 0).strftime('%s')
+`
+時得到的結果都不一樣，所以可以窮舉得出結果。修改程序得到flag：
+```
+$ cat main.py
+import datetime, struct
+str = '\\x6a\\x71\\x61\\x62\\x7d\\x7a\\x4d\\x47\\x5f\\x55\\x59\\x5b\\x6e\\x4f\\x51\\x53\\x42\\x55\\x67\\x51\\x46\\x6e\\x55\\x40\\x69\\x43\\x45\\x48\\x5d\\x47\\x6e\\x4b\\x4c\\x5f\\x44\\x4d'
+
+def b(key, flag):
+    res = ''
+    arr = flag.split('\\x')[1:]
+    for i in range(0, len(arr)):
+        res += chr(ord(key[i % len(key)]) ^ int(arr[i], 16))
+    print res
+
+for h in range(24):
+    time_res = datetime.datetime(1998, 1, 19, h, 0).strftime('%s')
+    b(time_res, str)
+$ python main.py | grep 'RITSEC{'
+RITSEC{woman_where_is_my_super_suit}
+```
+
+1. [Manually Unpacking PyInstaller (Python 2p6)](https://advancedpersistentjest.com/2016/07/31/manually-unpacking-pyinstaller-python-2p6/)
+1. [Python-Based Malware Uses NSA Exploit to Propagate Monero (XMR) Miner](https://www.fortinet.com/blog/threat-research/python-based-malware-uses-nsa-exploit-to-propagate-monero--xmr--.html)
+
+## One of these things doesn't belong!
+待學習補充。
+
+## mov
+給了一個二進制文件，裏面全部都是mov指令！！完全看不懂。後來才知道原來使用一個叫做[movfuscator](https://github.com/xoreaxeaxeax/movfuscator)的混淆器混淆過的。相應的，還有一個解混淆的工具[demov](https://github.com/kirschju/demovfuscator)。`demov mov -o a.out`可以得到解混淆後的文件，其實大部分mov指令並沒有得到解決，但是確實有一些改進，比如main函數原來IDA無法反編譯，現在可以了，但是由於其中絕大多數都是mov指令，所以反編譯結果其實也不具備可讀性。
+
+一個重要的改進是我們現在可以得到程序的控制流圖了，從而可以在關鍵節點處設置斷點進行動態跟蹤。
+```
+$ ctf-demov mov -g cfg.dot
+$ cat cfg.dot | dot -Tpng > cfg.png
+$ cat cfg.dot | grep label=\"80 | sed -r 's/.*label="(.{7}).*/b *0x\1/' > brk.gdbinit
+```
+
+隨後就是一系列動態跟蹤，比較繁瑣並且也很難看出比較過程。詳細請見參考Writeup。
+
+對與這道題，就瞭解一下movfuscator和demov吧。
+
+1. [movfuscator](https://github.com/xoreaxeaxeax/movfuscator)
+2. [demov](https://github.com/kirschju/demovfuscator)
+3. [參考Writeup](https://github.com/happysox/CTF_Writeups/tree/master/RITSEC_CTF_2018/mov)
+
+## ReverseMe!
+解壓所給壓縮包，得到兩個文件：a.out和core.6723。
+
+flint分析一下a.out，只得到一個有意思的地方就是含有一個字符串`XXXXXXXXXXXXXXXXITSTHECRYPTOKEY!`。
+
+gdb分析一下core文件，發現rip位於0x400566處的ret指令。
+```bash
+$ gdb a.out core.6723
+...
+Core was generated by `/home/brad/a.out'.
+Program terminated with signal SIGTRAP, Trace/breakpoint trap.
+#0  0x0000000000400566 in ?? ()
+gef➤  x/i $rip
+=> 0x400566:	ret
+```
+用IDA查看一下，發現是在main函數的ret處。
+
+IDA看一下main函數：
+```c
+__int64 __fastcall main(__int64 a1, char **argv, char **envp)
+{
+  char cryptokey[16]; // [rsp+10h] [rbp-20h]
+  char plaintext[16]; // [rsp+20h] [rbp-10h]
+
+  qmemcpy(plaintext, "XXXXXXXXXXXXXXXX", sizeof(plaintext));
+  qmemcpy(cryptokey, "ITSTHECRYPTOKEY!", sizeof(cryptokey));
+  func1((const __m128i *)cryptokey, (__int64)argv);
+  func2((const __m128i *)plaintext, (__m128i *)plaintext);
+  memset(&xmmword_602040, 0, 304uLL);
+  return 0LL;
+}
+```
+其中func1和func2函數都很晦澀，func1中反覆向xmm1賦值並調用aeskeygenassist指令，然後反覆向xmm0賦值並調用aesimc指令。func2反覆調用aesenc指令(9次)後調用1次aesenclast指令。Google或manasm可知這幾個指令的用途：
+```
+AESKEYGENASSIST - AES Round Key Generation Assist
+AESIMC - Perform the AES InvMixColumn Transformation
+AESENC - Perform One Round of an AES Encryption Flow
+AESENCLAST - Perform Last Round of an AES Encryption Flow
+```
+於是猜測func1是完成AES中密鑰生成，func2用於完成AES加密工作。
+
+根據[相關材料Use_of_the_AES_Instruction_Set](https://www.cosic.esat.kuleuven.be/ecrypt/AESday/slides/Use_of_the_AES_Instruction_Set.pdf)，加密前xmm0保存着明文，xmm1-xmm11保存着輪密鑰。加密完成後xmm0中保存着密文：
+![](./Reverse/aesENC.png)
+
+看一下core文件中相應內容，注意前面代碼中plaintext和cryptokey的位置，以及retn前面兩個指令是`add rsp 30h, pop rbp`：
+```gdb
+gef➤  x/x $rbp
+0x400fa0:	0x495641d789495741
+gef➤  x/6gx $rsp-0x30
+0x7fffffffd688:	0x0000000000000000	0x5959595959595959
+0x7fffffffd698:	0x5959595959595959	0xdfd2cc3570fc29a6
+0x7fffffffd6a8:	0x9f4f5ec2eb42fb99	0x0000000000400fa0
+gef➤  $ 0x5959595959595959
+6438275382588823897
+0x5959595959595959
+0b101100101011001010110010101100101011001010110010101100101011001
+b'YYYYYYYY'
+b'YYYYYYYY'
+gef➤  $ 0xdfd2cc3570fc29a6
+16128177745468074406
+0xdfd2cc3570fc29a6
+0b1101111111010010110011000011010101110000111111000010100110100110
+b'\xdf\xd2\xcc5p\xfc)\xa6'
+b'\xa6)\xfcp5\xcc\xd2\xdf'
+gef➤  $ 0x9f4f5ec2eb42fb99
+11479498166454385561
+0x9f4f5ec2eb42fb99
+0b1001111101001111010111101100001011101011010000101111101110011001
+b'\x9fO^\xc2\xebB\xfb\x99'
+b'\x99\xfbB\xeb\xc2^O\x9f'
+```
+key對應着'YYYYYYYYYYYYYYYY'，而paintext對應b'\xa6)\xfcp5\xcc\xd2\xdf\x99\xfbB\xeb\xc2^O\x9f'，此時應該是加密後的密文了。
+
+解密可以得到明文：
+```python
+In [1]: from Crypto.Cipher import AES
+In [2]: c = b'\xa6)\xfcp5\xcc\xd2\xdf\x99\xfbB\xeb\xc2^O\x9f'
+In [3]: print(AES.new(b'Y'*16, AES.MODE_CBC, iv=b'\x00'*16).decrypt(c))
+b'\xd0\xc4\xf6\xbdzK\xd2\xce\x15\xee\xdar&\xaf\x08P'
+In [4]: print(AES.new(b'ITSTHECRYPTOKEY!', AES.MODE_CBC, iv=b'\x00'*16).decrypt(c))
+b'RITSEC{AESISFUN}'
+```
