@@ -476,3 +476,6 @@ edit(1, 4, p32(sys_libc))
 delete(2)
 r.interactive()
 ```
+
+### 純動態跟蹤分析方法
+[這篇writeup](https://lordidiot.github.io/2018-11-18/ritsec-ctf-2018/#yet-another-hr-management-framework-pwn)使用了給malloc和free掛鉤子的方法來動態分析程序在何時調用malloc和free以及返回trunk的地址和大小，也很有借鑑意義。
